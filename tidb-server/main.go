@@ -23,12 +23,13 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"C"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/juju/errors"
 	"github.com/pingcap/pd/pkg/logutil"
 	"github.com/pingcap/tidb"
-	"github.com/pingcap/tidb/config"
 	"github.com/pingcap/tidb/ddl"
 	"github.com/pingcap/tidb/domain"
 	"github.com/pingcap/tidb/kv"
@@ -49,6 +50,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+var cmd = flag.NewFlagSet("cmdparameters", flag.ExitOnError)
 // Flag Names
 const (
 	nmVersion         = "V"
@@ -101,6 +103,14 @@ var (
 			Help:      "Counter of system time jumps backward.",
 		})
 )
+var argsArray []string
+
+//export startServer
+func startServer(cmdArgs *C.char){
+	var args=C.GoString(cmdArgs)
+	argsArray=strings.Fields(args)
+    main()
+}
 
 var (
 	cfg     *config.Config
@@ -111,7 +121,8 @@ var (
 )
 
 func main() {
-	flag.Parse()
+	//flag.Parse()
+	cmd.Parse(argsArray)\
 	if *version {
 		printer.PrintRawTiDBInfo()
 		os.Exit(0)
