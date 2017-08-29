@@ -50,6 +50,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+//@PHILO
 var cmd = flag.NewFlagSet("cmdparameters", flag.ExitOnError)
 // Flag Names
 const (
@@ -105,6 +106,7 @@ var (
 )
 var argsArray []string
 
+//@PHILO
 //export startServer
 func startServer(cmdArgs *C.char){
 	var args=C.GoString(cmdArgs)
