@@ -29,7 +29,8 @@ import (
 	"github.com/ngaut/log"
 	"github.com/ngaut/systimemon"
 	"github.com/pingcap/tidb"
-	"github.com/pingcap/tidb/ddl"
+	"github.com/pingcap/tidb/config"
+    "github.com/pingcap/tidb/ddl"
 	"github.com/pingcap/tidb/kv"
 	"github.com/pingcap/tidb/perfschema"
 	"github.com/pingcap/tidb/plan"
@@ -45,30 +46,34 @@ import (
 	"google.golang.org/grpc"
 )
 
+//@PHILO
 var cmd = flag.NewFlagSet("cmdparameters", flag.ExitOnError)
 var (
-	version         = cmd.Bool("V", false, "print version information and exit")
-	store           = cmd.String("store", "goleveldb", "registered store name, [memory, goleveldb, boltdb, tikv, mocktikv]")
-	storePath       = cmd.String("path", "/tmp/tidb", "tidb storage path")
-	logLevel        = cmd.String("L", "info", "log level: info, debug, warn, error, fatal")
-	host            = cmd.String("host", "0.0.0.0", "tidb server host")
-	port            = cmd.String("P", "4000", "tidb server port")
-	statusPort      = cmd.String("status", "10080", "tidb server status port")
-	ddlLease        = cmd.String("lease", "10s", "schema lease duration, very dangerous to change only if you know what you do")
-	statsLease      = cmd.String("statsLease", "3s", "stats lease duration, which inflences the time of analyze and stats load.")
-	socket          = cmd.String("socket", "", "The socket file to use for connection.")
-	enablePS        = cmd.Bool("perfschema", false, "If enable performance schema.")
-	enablePrivilege = cmd.Bool("privilege", true, "If enable privilege check feature. This flag will be removed in the future.")
-	reportStatus    = cmd.Bool("report-status", true, "If enable status report HTTP service.")
-	logFile         = cmd.String("log-file", "", "log file path")
-	joinCon         = cmd.Int("join-concurrency", 5, "the number of goroutines that participate joining.")
-	crossJoin       = cmd.Bool("cross-join", true, "whether support cartesian product or not.")
-	metricsAddr     = cmd.String("metrics-addr", "", "prometheus pushgateway address, leaves it empty will disable prometheus push.")
-	metricsInterval = cmd.Int("metrics-interval", 15, "prometheus client push interval in second, set \"0\" to disable prometheus push.")
-	binlogSocket    = cmd.String("binlog-socket", "", "socket file to write binlog")
-	runDDL          = cmd.Bool("run-ddl", true, "run ddl worker on this tidb-server")
-	retryLimit      = cmd.Int("retry-limit", 10, "the maximum number of retries when commit a transaction")
-	skipGrantTable  = cmd.Bool("skip-grant-table", false, "This option causes the server to start without using the privilege system at all.")
+	version             = cmd.Bool("V", false, "print version information and exit")
+	store               = cmd.String("store", "goleveldb", "registered store name, [memory, goleveldb, boltdb, tikv, mocktikv]")
+	storePath           = cmd.String("path", "/tmp/tidb", "tidb storage path")
+	logLevel            = cmd.String("L", "info", "log level: info, debug, warn, error, fatal")
+	host                = cmd.String("host", "0.0.0.0", "tidb server host")
+	port                = cmd.String("P", "4000", "tidb server port")
+	statusPort          = cmd.String("status", "10080", "tidb server status port")
+	ddlLease            = cmd.String("lease", "10s", "schema lease duration, very dangerous to change only if you know what you do")
+	statsLease          = cmd.String("statsLease", "3s", "stats lease duration, which inflences the time of analyze and stats load.")
+	socket              = cmd.String("socket", "", "The socket file to use for connection.")
+	enablePS            = cmd.Bool("perfschema", false, "If enable performance schema.")
+	enablePrivilege     = cmd.Bool("privilege", true, "If enable privilege check feature. This flag will be removed in the future.")
+	reportStatus        = cmd.Bool("report-status", true, "If enable status report HTTP service.")
+	logFile             = cmd.String("log-file", "", "log file path")
+	joinCon             = cmd.Int("join-concurrency", 5, "the number of goroutines that participate joining.")
+	crossJoin           = cmd.Bool("cross-join", true, "whether support cartesian product or not.")
+	metricsAddr         = cmd.String("metrics-addr", "", "prometheus pushgateway address, leaves it empty will disable prometheus push.")
+	metricsInterval     = cmd.Int("metrics-interval", 15, "prometheus client push interval in second, set \"0\" to disable prometheus push.")
+	binlogSocket        = cmd.String("binlog-socket", "", "socket file to write binlog")
+	runDDL              = cmd.Bool("run-ddl", true, "run ddl worker on this tidb-server")
+	retryLimit          = cmd.Int("retry-limit", 10, "the maximum number of retries when commit a transaction")
+	skipGrantTable      = cmd.Bool("skip-grant-table", false, "This option causes the server to start without using the privilege system at all.")
+	slowThreshold       = cmd.Int("slow-threshold", 300, "Queries with execution time greater than this value will be logged. (Milliseconds)")
+	queryLogMaxlen      = cmd.Int("query-log-max-len", 2048, "Maximum query length recorded in log")
+	tcpKeepAlive        = cmd.Bool("tcp-keep-alive", false, "set keep alive option for tcp connection.")
 
 	timeJumpBackCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
@@ -80,6 +85,7 @@ var (
 )
 var argsArray []string
 
+//@PHILO
 //export startServer
 func startServer(cmdArgs *C.char){
 	var args=C.GoString(cmdArgs)
@@ -112,15 +118,17 @@ func main() {
 	ddl.RunWorker = *runDDL
 	tidb.SetCommitRetryLimit(*retryLimit)
 
-	cfg := &server.Config{
-		Addr:         fmt.Sprintf("%s:%s", *host, *port),
-		LogLevel:     *logLevel,
-		StatusAddr:   fmt.Sprintf(":%s", *statusPort),
-		Socket:       *socket,
-		ReportStatus: *reportStatus,
-		Store:        *store,
-		StorePath:    *storePath,
-	}
+	cfg := config.GetGlobalConfig()
+	cfg.Addr = fmt.Sprintf("%s:%s", *host, *port)
+	cfg.LogLevel = *logLevel
+	cfg.StatusAddr = fmt.Sprintf(":%s", *statusPort)
+	cfg.Socket = *socket
+	cfg.ReportStatus = *reportStatus
+	cfg.Store = *store
+	cfg.StorePath = *storePath
+	cfg.SlowThreshold = *slowThreshold
+	cfg.QueryLogMaxlen = *queryLogMaxlen
+	cfg.TCPKeepAlive = *tcpKeepAlive
 
 	// set log options
 	if len(*logFile) > 0 {
