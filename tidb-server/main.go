@@ -108,10 +108,15 @@ var argsArray []string
 
 //@PHILO
 //export startServer
-func startServer(cmdArgs *C.char){
-	var args=C.GoString(cmdArgs)
-	argsArray=strings.Fields(args)
-    main()
+func startServer(cmdArgs *C.char) {
+	var args = C.GoString(cmdArgs)
+	argsArray = strings.Fields(args)
+	main()
+}
+
+//export isTidbServerReady
+func isTidbServerReady() bool {
+	return server.IsHTTPServerReady()
 }
 
 var (

@@ -38,6 +38,12 @@ func (s *Server) startStatusHTTP() {
 	})
 }
 
+var isReady bool = false
+
+func IsHTTPServerReady() bool {
+	return isReady
+}
+
 func (s *Server) startHTTPServer() {
 	router := mux.NewRouter()
 	router.HandleFunc("/status", s.handleStatus)
@@ -59,6 +65,9 @@ func (s *Server) startHTTPServer() {
 		addr = defaultStatusAddr
 	}
 	log.Infof("Listening on %v for status and metrics report.", addr)
+
+	isReady = true
+
 	http.Handle("/", router)
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
