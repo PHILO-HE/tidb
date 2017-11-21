@@ -30,6 +30,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/pingcap/pd/pkg/logutil"
 	"github.com/pingcap/tidb"
+	"github.com/pingcap/tidb/config"
 	"github.com/pingcap/tidb/ddl"
 	"github.com/pingcap/tidb/domain"
 	"github.com/pingcap/tidb/kv"
@@ -74,27 +75,27 @@ const (
 
 var (
 	version    = flagBoolean(nmVersion, false, "print version information and exit")
-	configPath = flag.String(nmConfig, "", "config file path")
+	configPath = cmd.String(nmConfig, "", "config file path")
 
 	// Base
-	store        = flag.String(nmStore, "mocktikv", "registered store name, [memory, goleveldb, boltdb, tikv, mocktikv]")
-	storePath    = flag.String(nmStorePath, "/tmp/tidb", "tidb storage path")
-	host         = flag.String(nmHost, "0.0.0.0", "tidb server host")
-	port         = flag.String(nmPort, "4000", "tidb server port")
-	socket       = flag.String(nmSocket, "", "The socket file to use for connection.")
-	binlogSocket = flag.String(nmBinlogSocket, "", "socket file to write binlog")
+	store        = cmd.String(nmStore, "mocktikv", "registered store name, [memory, goleveldb, boltdb, tikv, mocktikv]")
+	storePath    = cmd.String(nmStorePath, "/tmp/tidb", "tidb storage path")
+	host         = cmd.String(nmHost, "0.0.0.0", "tidb server host")
+	port         = cmd.String(nmPort, "4000", "tidb server port")
+	socket       = cmd.String(nmSocket, "", "The socket file to use for connection.")
+	binlogSocket = cmd.String(nmBinlogSocket, "", "socket file to write binlog")
 	runDDL       = flagBoolean(nmRunDDL, true, "run ddl worker on this tidb-server")
-	ddlLease     = flag.String(nmDdlLease, "10s", "schema lease duration, very dangerous to change only if you know what you do")
+	ddlLease     = cmd.String(nmDdlLease, "10s", "schema lease duration, very dangerous to change only if you know what you do")
 
 	// Log
-	logLevel = flag.String(nmLogLevel, "info", "log level: info, debug, warn, error, fatal")
-	logFile  = flag.String(nmLogFile, "", "log file path")
+	logLevel = cmd.String(nmLogLevel, "info", "log level: info, debug, warn, error, fatal")
+	logFile  = cmd.String(nmLogFile, "", "log file path")
 
 	// Status
 	reportStatus    = flagBoolean(nmReportStatus, true, "If enable status report HTTP service.")
-	statusPort      = flag.String(nmStatusPort, "10080", "tidb server status port")
-	metricsAddr     = flag.String(nmMetricsAddr, "", "prometheus pushgateway address, leaves it empty will disable prometheus push.")
-	metricsInterval = flag.Int(nmMetricsInterval, 15, "prometheus client push interval in second, set \"0\" to disable prometheus push.")
+	statusPort      = cmd.String(nmStatusPort, "10080", "tidb server status port")
+	metricsAddr     = cmd.String(nmMetricsAddr, "", "prometheus pushgateway address, leaves it empty will disable prometheus push.")
+	metricsInterval = cmd.Int(nmMetricsInterval, 15, "prometheus client push interval in second, set \"0\" to disable prometheus push.")
 
 	timeJumpBackCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
@@ -129,7 +130,7 @@ var (
 
 func main() {
 	//flag.Parse()
-	cmd.Parse(argsArray)\
+	cmd.Parse(argsArray)
 	if *version {
 		printer.PrintRawTiDBInfo()
 		os.Exit(0)
@@ -245,9 +246,11 @@ func flagBoolean(name string, defaultVal bool, usage string) *bool {
 	if defaultVal == false {
 		// Fix #4125, golang do not print default false value in usage, so we append it.
 		usage = fmt.Sprintf("%s (default false)", usage)
-		return flag.Bool(name, defaultVal, usage)
+		//return flag.Bool(name, defaultVal, usage)  //@PHILO
+		return cmd.Bool(name, defaultVal, usage)
 	}
-	return flag.Bool(name, defaultVal, usage)
+	//return flag.Bool(name, defaultVal, usage)   //@PHILO
+	return cmd.Bool(name, defaultVal, usage)
 }
 
 func loadConfig() {
@@ -260,7 +263,8 @@ func loadConfig() {
 
 func overrideConfig() {
 	actualFlags := make(map[string]bool)
-	flag.Visit(func(f *flag.Flag) {
+	//flag.Visit(func(f *flag.Flag) {   //@PHILO
+	cmd.Visit(func(f *flag.Flag) {
 		actualFlags[f.Name] = true
 	})
 
